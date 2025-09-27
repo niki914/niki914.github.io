@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to My Site</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      text-align: center;
+      padding-top: 50px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    #message {
+      margin-top: 20px;
+      font-size: 18px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <h1>Hello! Welcome to my GitHub Page 🎉</h1>
+  <p>Click the button to see a message:</p>
+  <button onclick="showMessage()">Click Me</button>
+  <div id="message"></div>
+
+  <script>
+    function showMessage() {
+      const messageDiv = document.getElementById('message');
+      const messages = [
+        "Thanks for visiting!",
+        "Have a great day!",
+        "You clicked the button! 🎈",
+        "GitHub Pages is awesome!"
+      ];
+      // 随机显示一条消息
+      const random = Math.floor(Math.random() * messages.length);
+      messageDiv.textContent = messages[random];
+    }
+  </script>
+</body>
+</html>
