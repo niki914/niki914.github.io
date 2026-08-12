@@ -1,9 +1,11 @@
 /* ===========================================
-   DECORATIVE PHYSICS LAYER — olive/amber shapes
-   swim freely like fish: drifting, pausing,
-   steering around each other, never touching.
-   No pointer interaction. Sandwiched between
-   the dot ground and the type layer.
+   DECORATIVE FLOAT LAYER — olive/amber shapes
+   float lazily: each drifts up/down/left/right
+   around its rest spot on slow sine clocks and
+   wags a few degrees. No forces, no steering,
+   no pair checks — every body is a pure
+   function of time, so the whole simulation is
+   a handful of sin() per shape per frame.
    Module: window.__physics.createFxLayer(canvas)
    → { resize, tick }, driven by reveal.js's
    rAF loop. Shapes live in a logical 1920×1080
@@ -13,51 +15,37 @@ window.__physics = (() => {
   "use strict";
 
   /* =====================================================
-     TUNING — sizes, speeds and forces, all in one place.
-     The stage is 1920 × 1080. Colors live in `specs`.
+     TUNING — sizes, drift and rotation, all in one place.
+     Frequencies are rad/s: freq 0.11 → one full lazy lap
+     takes ≈ 57 s. Rotation amplitude stays under 10°.
      ===================================================== */
   const CFG = {
     // ---- sizes ----
     shapeScale: 1,      // global size multiplier for all shapes
     gap: 1.1,           // min gap between shapes, × (r₁ + r₂)
 
-    // ---- free swimming ----
-    swimSpeed: 60,      // base drift speed, px/s
-    swimTurn: 0.7,      // how fast the drift direction changes, rad/s
-    swimPull: 1.0,      // attraction toward the wander point
-    swimDamping: 0.85,  // velocity friction while swimming
-    swimMaxSpeed: 260,  // safety speed cap, px/s
-    swimMaxAccel: 300,  // safety acceleration cap, px/s²
-    speedVariance: 0.4, // ± per-shape speed difference (fraction)
+    // ---- lazy drift ----
+    drift: 64,          // drift amplitude, px per axis (bigger shapes drift further)
+    freq: 0.11,         // base drift frequency, rad/s
+    freqVary: 0.45,     // ± per-shape frequency spread (fraction)
+    wobble: 0.38,       // secondary sine amplitude, × main — breaks the rigid orbit
+    wobbleFreq: 2.6,    // secondary frequency, × main (randomized ±, never repeats)
 
-    // ---- pauses (float in place) ----
-    pauseMin: 3,        // seconds of swimming between pauses
-    pauseMax: 8,
-    restMin: 1.5,       // seconds of floating per pause
-    restMax: 3.5,
-
-    // ---- even distribution ----
-    goalSpread: 340,    // wander points keep at least this apart, px
-    goalNudge: 1.4,     // how firmly goals push apart, px/frame at full overlap
-    anchorPull: 0.45,   // wander points drift back toward their home, per s
-
-    // ---- active avoidance (主动避让) ----
-    avoid: 500,         // steering accel when shapes get close, px/s²
-    edgeMargin: 160,    // steer away from stage edges within this, px
-
-    // ---- motion flavor ----
-    breathRate: 0.0005, // breathing sway speed, rad per ms
-    breathAmount: 0.22, // breathing sway amplitude, rad
-    bankAmount: 0.0016, // tilt into the drift, rad per px/s of vx
+    // ---- lazy rotation ----
+    tilt: 0.13,         // rotation amplitude, rad — ≈ 7.4°, always under 10°
+    tiltVary: 0.30,     // ± per-shape tilt spread → max 9.7°
+    tiltFreq: 0.15,     // rotation frequency, rad/s (a full wag ≈ 42 s)
+    tiltFreqVary: 0.4,
   };
 
   // gentler values when the user prefers reduced motion
-  const GENTLE = { breathAmount: 0, bankAmount: 0 };
+  const GENTLE = { drift: 0.45, tilt: 0.45 };
 
   function createFxLayer(canvas) {
     const ctx = canvas.getContext("2d");
     const W = 1920, H = 1080, TAU = Math.PI * 2;
     const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const rnd = (v) => 1 + (Math.random() - .5) * 2 * v;   // 1 ± v
 
     /* 7 distinctive silhouettes, spread wide with margins, in
        the deck's olive / amber / cream tokens. x/y = rest
@@ -75,159 +63,56 @@ window.__physics = (() => {
       { kind:"composite", x:1520, y:820, w:264, h:264, r:120, color:"rgba(233,237,201,.9)", innerColor:"rgba(40,54,24,.9)", angle:-.04 }
     ];
 
-    let bodies = [], lastTime = performance.now();
-    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+    /* each body carries its own slow clocks — phases and
+       frequencies are fixed at boot, so nothing random runs
+       per frame. x, y, a are pure functions of time. */
+    const bodies = specs.map((s) => {
+      const f1 = CFG.freq * rnd(CFG.freqVary);            // main drift clock
+      return {
+        s,
+        x0: s.x, y0: s.y, a0: s.angle || 0,
+        ampX: CFG.drift * (1 + s.r / 220),                // bigger shapes drift further
+        ampY: CFG.drift * (1 + s.r / 220),
+        f1x: f1, p1x: Math.random() * TAU,
+        f1y: f1 * rnd(.35), p1y: Math.random() * TAU,
+        f2x: f1 * CFG.wobbleFreq * rnd(.5), p2x: Math.random() * TAU,
+        f2y: f1 * CFG.wobbleFreq * rnd(.5), p2y: Math.random() * TAU,
+        fa: CFG.tiltFreq * rnd(CFG.tiltFreqVary), pa: Math.random() * TAU,
+        tilt: CFG.tilt * rnd(CFG.tiltVary),
+        w: s.w * CFG.shapeScale, h: s.h * CFG.shapeScale, r: s.r * CFG.shapeScale,
+      };
+    });
 
-    bodies = specs.map((s, i) => ({
-      s, i,
-      x: s.x, y: s.y, vx: 0, vy: 0,
-      a: s.angle || 0, av: 0,
-      w: s.w * CFG.shapeScale, h: s.h * CFG.shapeScale, r: s.r * CFG.shapeScale,
-      wx: s.x, wy: s.y,                      // wander point it swims toward
-      ax: s.x, ay: s.y,                      // home anchor — keeps it spread
-      heading: Math.random() * TAU,          // current drift direction
-      speedFactor: 1 + (Math.random() - .5) * CFG.speedVariance * 2,
-      rest: CFG.pauseMin + Math.random() * (CFG.pauseMax - CFG.pauseMin),
-      pause: 0,                              // seconds left floating in place
-      fx: 0, fy: 0,                          // steering force accumulator
-    }));
-
-    // Soft edges — shapes rest against the stage, never bounce.
-    function contain(b) {
-      if (b.x < b.r) { b.x = b.r; b.vx = 0; }
-      else if (b.x > W - b.r) { b.x = W - b.r; b.vx = 0; }
-      if (b.y < b.r) { b.y = b.r; b.vy = 0; }
-      else if (b.y > H - b.r) { b.y = H - b.r; b.vy = 0; }
-    }
-
-    // Active avoidance (主动避让) — accumulate steering forces so
-    // shapes flow around each other before touching. No impulses,
-    // no position teleports, no bouncing, no squeezing.
-    function steerApart(a, b) {
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const dist = Math.hypot(dx, dy);
-      const zone = (a.r + b.r) * CFG.gap;
-      if (dist >= zone || dist < 1e-4) return;
-      const t = 1 - dist / zone;   // 0 at zone edge → 1 at full overlap
-      const f = t * t * CFG.avoid; // quadratic falloff, px/s²
-      const nx = dx / dist, ny = dy / dist;
-      a.fx -= nx * f; a.fy -= ny * f;
-      b.fx += nx * f; b.fy += ny * f;
-    }
-
-    // Soft edge avoidance — drift off the walls before touching.
-    function steerFromEdges(b) {
-      const m = CFG.edgeMargin;
-      if (b.x < m) b.fx += CFG.avoid * Math.pow(1 - b.x / m, 2);
-      else if (b.x > W - m) b.fx -= CFG.avoid * Math.pow(1 - (W - b.x) / m, 2);
-      if (b.y < m) b.fy += CFG.avoid * Math.pow(1 - b.y / m, 2);
-      else if (b.y > H - m) b.fy -= CFG.avoid * Math.pow(1 - (H - b.y) / m, 2);
-    }
-
-    // Even distribution — the wander goals repel each other (and
-    // keep out of other shapes' personal space), so the shapes
-    // spread across the stage instead of gathering on one side.
-    // Goals are virtual targets, so nudging them is invisible.
-    function spreadGoals() {
-      const zone = CFG.goalSpread;
-      // goals keep their distance from each other
-      for (let i = 0; i < bodies.length; i++) {
-        for (let j = i + 1; j < bodies.length; j++) {
-          const a = bodies[i], b = bodies[j];
-          const dx = b.wx - a.wx, dy = b.wy - a.wy;
-          const dist = Math.hypot(dx, dy);
-          if (dist >= zone || dist < 1e-4) continue;
-          const t = 1 - dist / zone;
-          const nudge = t * t * CFG.goalNudge;
-          const nx = dx / dist, ny = dy / dist;
-          a.wx -= nx * nudge; a.wy -= ny * nudge;
-          b.wx += nx * nudge; b.wy += ny * nudge;
-        }
-      }
-      // goals avoid sitting inside other shapes
-      for (const a of bodies) {
-        for (const b of bodies) {
-          if (a === b) continue;
-          const dx = a.wx - b.x, dy = a.wy - b.y;
-          const dist = Math.hypot(dx, dy);
-          const zoneB = (a.r + b.r) * CFG.gap + 30;
-          if (dist >= zoneB || dist < 1e-4) continue;
-          const t = 1 - dist / zoneB;
-          a.wx += (dx / dist) * t * t * CFG.goalNudge;
-          a.wy += (dy / dist) * t * t * CFG.goalNudge;
-        }
-      }
-      // keep goals inside the stage
-      const m = CFG.edgeMargin;
+    // Boot-time safety, run once: cap each shape's drift so even
+    // the worst-case extremes can't reach a neighbour. The worst
+    // case is both shapes anti-aligned on BOTH axes (a diagonal
+    // lunge), which closes the gap √2 × faster than one axis, so
+    // the cap carries the √2. Rest spots stay as spread as the
+    // specs say — only the swing radius shrinks a little.
+    const lunge = (1 + CFG.wobble) * Math.SQRT2;
+    for (const a of bodies) {
+      let room = Infinity;
       for (const b of bodies) {
-        b.wx = clamp(b.wx, m, W - m);
-        b.wy = clamp(b.wy, m, H - m);
+        if (a === b) continue;
+        const zone = (a.r + b.r) * CFG.gap + 12;
+        room = Math.min(room, (Math.hypot(a.x0 - b.x0, a.y0 - b.y0) - zone) / 2);
       }
+      const cap = Math.max(20, room / lunge);
+      a.ampX = Math.min(a.ampX, cap);
+      a.ampY = Math.min(a.ampY, cap);
     }
 
-    function simulate(dt) {
-      const now = performance.now();
-      const speedScale = reducedMotion ? .45 : 1;
-      const breathAmount = reducedMotion ? GENTLE.breathAmount : CFG.breathAmount;
-      const bankAmount = reducedMotion ? GENTLE.bankAmount : CFG.bankAmount;
-
-      // ---- accumulate steering forces ----
-      for (const b of bodies) { b.fx = 0; b.fy = 0; }
-      for (let i = 0; i < bodies.length; i++) {
-        for (let j = i + 1; j < bodies.length; j++) steerApart(bodies[i], bodies[j]);
-      }
-      for (const b of bodies) steerFromEdges(b);
-
-      // ---- swim: wander, chase, apply steering ----
+    function simulate(t) {   // t in seconds — x, y, a are pure functions of t
+      const driftK = reducedMotion ? GENTLE.drift : 1;
+      const tiltK = reducedMotion ? GENTLE.tilt : 1;
       for (const b of bodies) {
-        // pause scheduling: swim a while, then float in place
-        if (b.pause > 0) {
-          b.pause -= dt;
-        } else {
-          b.rest -= dt;
-          if (b.rest <= 0) {
-            b.pause = CFG.restMin + Math.random() * (CFG.restMax - CFG.restMin);
-            b.rest = CFG.pauseMin + Math.random() * (CFG.pauseMax - CFG.pauseMin);
-          }
-          // wander point meanders along a slowly turning heading
-          b.heading += (Math.random() - .5) * CFG.swimTurn * dt;
-          const sp = CFG.swimSpeed * b.speedFactor * speedScale;
-          b.wx += Math.cos(b.heading) * sp * dt;
-          b.wy += Math.sin(b.heading) * sp * dt;
-          // keep the wander point inside the stage — reflect the heading
-          const m = CFG.edgeMargin;
-          if (b.wx < m) { b.wx = m; b.heading = Math.PI - b.heading; }
-          else if (b.wx > W - m) { b.wx = W - m; b.heading = Math.PI - b.heading; }
-          if (b.wy < m) { b.wy = m; b.heading = -b.heading; }
-          else if (b.wy > H - m) { b.wy = H - m; b.heading = -b.heading; }
-          // drift back toward its home anchor — shapes stay spread
-          b.wx += (b.ax - b.wx) * CFG.anchorPull * b.speedFactor * dt;
-          b.wy += (b.ay - b.wy) * CFG.anchorPull * b.speedFactor * dt;
-        }
-        const paused = b.pause > 0;
-
-        // soft chase of the wander point + avoidance steering
-        let ax = (b.wx - b.x) * (paused ? .25 : CFG.swimPull) - b.vx * (paused ? .9 : CFG.swimDamping) + b.fx;
-        let ay = (b.wy - b.y) * (paused ? .25 : CFG.swimPull) - b.vy * (paused ? .9 : CFG.swimDamping) + b.fy;
-        const acc = Math.hypot(ax, ay), cap = reducedMotion ? 180 : CFG.swimMaxAccel;
-        if (acc > cap) { ax *= cap / acc; ay *= cap / acc; }
-        b.vx += ax * dt; b.vy += ay * dt;
-        const maxV = paused ? 50 : CFG.swimMaxSpeed;
-        b.vx = clamp(b.vx, -maxV, maxV); b.vy = clamp(b.vy, -maxV, maxV);
-        b.x += b.vx * dt; b.y += b.vy * dt;
-
-        // tilt into the drift + gentle breathing
-        const sway = Math.sin(now * CFG.breathRate + b.i * 1.9) * breathAmount;
-        const bank = clamp(b.vx * bankAmount, -.3, .3);
-        b.av += ((b.s.angle || 0) + sway + bank - b.a) * .02;
-        b.av *= .9; b.a += b.av;
+        b.x = b.x0 + (Math.sin(t * b.f1x + b.p1x) + Math.sin(t * b.f2x + b.p2x) * CFG.wobble) * b.ampX * driftK;
+        b.y = b.y0 + (Math.sin(t * b.f1y + b.p1y) + Math.sin(t * b.f2y + b.p2y) * CFG.wobble) * b.ampY * driftK;
+        b.a = b.a0 + Math.sin(t * b.fa + b.pa) * b.tilt * tiltK;
+        // safety net — rest spots sit far from the walls, never fires
+        if (b.x < b.r) b.x = b.r; else if (b.x > W - b.r) b.x = W - b.r;
+        if (b.y < b.r) b.y = b.r; else if (b.y > H - b.r) b.y = H - b.r;
       }
-
-      // keep the goals spread — shapes follow, distribution stays even
-      spreadGoals();
-
-      // hard safety: never leave the stage
-      for (const b of bodies) contain(b);
     }
 
     function smooth(points) {
@@ -284,8 +169,7 @@ window.__physics = (() => {
     }
 
     function tick(now) {
-      const dt = Math.min(Math.max((now - lastTime) / 1000, .001), .03); lastTime = now;
-      simulate(dt);
+      simulate(now / 1000);
       ctx.clearRect(0, 0, W, H);
       for (const b of bodies) drawBody(b);
     }
