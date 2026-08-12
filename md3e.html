@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>聚形力场</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #b6ddfa; }
+    body { font-family: system-ui, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; outline: none; }
+    canvas:focus-visible { outline: 2px solid rgba(32,78,106,.65); outline-offset: -5px; }
+    #hint, #reset {
+      position: fixed; top: 18px; z-index: 2; border: 1px solid rgba(255,255,255,.55);
+      border-radius: 999px; color: rgba(32,78,106,.76); background: rgba(229,246,255,.58);
+      box-shadow: 0 7px 24px rgba(52,105,140,.08); backdrop-filter: blur(12px);
+      font-size: 12px; font-weight: 650; letter-spacing: .03em;
+    }
+    #hint { left: 18px; padding: 10px 14px; pointer-events: none; transition: opacity .35s, transform .35s; }
+    #hint.hide { opacity: 0; transform: translateY(-5px); }
+    #reset { right: 18px; min-height: 38px; padding: 0 14px; cursor: pointer; }
+    #reset:hover { background: rgba(248,252,255,.82); }
+    #reset:active { transform: scale(.97); }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (prefers-reduced-motion: reduce) { #hint { transition: none; } }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" tabindex="0" aria-label="彩色形状物理画布，点击或拖动设置聚集点"></canvas>
+  <div id="hint">点击或拖动，让形状聚集 · R 重置</div>
+  <button id="reset" type="button">↺ 重置</button>
+  <p id="status" class="sr-only" aria-live="polite">画布已就绪</p>
+
+  <script>
+  (() => {
+    "use strict";
+
+    const canvas = document.querySelector("#canvas");
+    const ctx = canvas.getContext("2d");
+    const hint = document.querySelector("#hint");
+    const resetButton = document.querySelector("#reset");
+    const status = document.querySelector("#status");
+    const BASE_W = 1290, BASE_H = 738, TAU = Math.PI * 2;
+    const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    // 尺寸与位置按参考图的 1290 × 738 画布记录。
+    const specs = [
+      { kind:"blob", x:556, y:70,  w:137, h:137, r:56,  color:"#f3a4f3", radii:[.96,.91,1.02,.90,.98,.87,1,.91,1.03,.90,.99,.89] },
+      { kind:"flower", x:635, y:194, w:158, h:154, r:65, color:"#0dbdec", petals:9, inner:.70, angle:-.08 },
+      { kind:"roundRect", x:886, y:129, w:232, h:228, r:104, color:"#8a806a", corner:50, angle:.03 },
+      { kind:"poly", x:219, y:307, w:151, h:214, r:79, color:"#0cbee9", angle:-.16,
+        points:[[-.2,-.5],[.27,-.44],[.46,-.2],[.49,.24],[.14,.5],[-.33,.42],[-.5,.12],[-.46,-.3]] },
+      { kind:"blob", x:470, y:392, w:329, h:334, r:143, color:"#7183f3", radii:[1,.91,1.01,.87,.98,.9,1.03,.89,1,.91,1.02,.88,.98,.9] },
+      { kind:"poly", x:718, y:322, w:159, h:163, r:69, color:"#1765eb", angle:-.04,
+        points:[[-.18,-.5],[.26,-.47],[.49,-.2],[.43,.27],[.05,.5],[-.33,.36],[-.5,.08],[-.48,-.33]] },
+      { kind:"circle", x:922, y:352, w:224, h:224, r:104, color:"#df996b" },
+      { kind:"circle", x:1101, y:344, w:132, h:132, r:60, color:"#ca83ed" },
+      { kind:"flower", x:205, y:541, w:267, h:264, r:112, color:"#ffff91", petals:17, inner:.69, angle:.03 },
+      { kind:"poly", x:382, y:624, w:125, h:127, r:53, color:"#df9969", angle:-.13,
+        points:[[-.18,-.5],[.32,-.39],[.5,-.08],[.37,.41],[-.2,.5],[-.46,.2],[-.5,-.16]] },
+      { kind:"blob", x:516, y:620, w:146, h:146, r:59, color:"#ff756c", radii:[1,.9,1.02,.88,.99,.91,1,.87,1.03,.9,.98,.91] },
+      { kind:"composite", x:744, y:564, w:330, h:330, r:150, color:"#f7f9c9", innerColor:"#155fe8", angle:-.04 },
+      { kind:"blob", x:1039, y:565, w:259, h:258, r:112, color:"#fb8196", radii:[1,.91,1.02,.9,.99,.87,1.02,.9,.98,.91,1.03,.88,.99,.9] }
+    ];
+
+    let W = 1, H = 1, scale = 1, offsetX = 0, offsetY = 0;
+    let bodies = [], active = false, dragging = false, pointerId = -1;
+    let lastTime = performance.now(), pulseTime = 0;
+    const target = { x: 0, y: 0 };
+    const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+    function layout() {
+      const rect = canvas.getBoundingClientRect();
+      W = Math.max(1, rect.width); H = Math.max(1, rect.height);
+      const dpr = Math.min(devicePixelRatio || 1, 2);
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      scale = Math.min(W / BASE_W, H / BASE_H);
+      offsetX = (W - BASE_W * scale) / 2;
+      offsetY = (H - BASE_H * scale) / 2;
+    }
+
+    function makeBodies() {
+      bodies = specs.map((s, i) => {
+        const radius = s.r * scale;
+        const mass = Math.max(.7, s.w * s.h * scale * scale / 14500);
+        return {
+          s, i, x:offsetX + s.x * scale, y:offsetY + s.y * scale,
+          vx:0, vy:0, a:s.angle || 0, av:0,
+          w:s.w * scale, h:s.h * scale, r:radius,
+          mass, invMass:1 / mass, inertia:.5 * mass * radius * radius
+        };
+      });
+      for (const b of bodies) b.invInertia = 1 / b.inertia;
+      active = false;
+      hint.classList.remove("hide");
+      status.textContent = "形状已重置";
+    }
+
+    function resize() {
+      const oldW = W, oldH = H;
+      layout();
+      if (!bodies.length) return makeBodies();
+      const sx = W / oldW, sy = H / oldH;
+      for (const b of bodies) { b.x *= sx; b.y *= sy; b.vx *= sx; b.vy *= sy; }
+      target.x *= sx; target.y *= sy;
+      // 重新计算物体尺寸与质量，保持响应式碰撞尺度。
+      for (const b of bodies) {
+        b.w = b.s.w * scale; b.h = b.s.h * scale; b.r = b.s.r * scale;
+        b.mass = Math.max(.7, b.s.w * b.s.h * scale * scale / 14500);
+        b.invMass = 1 / b.mass; b.inertia = .5 * b.mass * b.r * b.r; b.invInertia = 1 / b.inertia;
+      }
+    }
+
+    function setTarget(x, y, announce) {
+      target.x = clamp(x, 2, W - 2); target.y = clamp(y, 2, H - 2);
+      active = true; pulseTime = performance.now(); hint.classList.add("hide");
+      if (announce) status.textContent = "形状正在向新的聚集点移动";
+    }
+
+    function pointFromEvent(e) {
+      const rect = canvas.getBoundingClientRect();
+      return { x:e.clientX - rect.left, y:e.clientY - rect.top };
+    }
+
+    canvas.addEventListener("pointerdown", e => {
+      const p = pointFromEvent(e); dragging = true; pointerId = e.pointerId;
+      canvas.setPointerCapture(e.pointerId); setTarget(p.x, p.y, true);
+    });
+    canvas.addEventListener("pointermove", e => {
+      if (!dragging || e.pointerId !== pointerId) return;
+      const p = pointFromEvent(e); setTarget(p.x, p.y, false);
+    });
+    function pointerUp(e) {
+      if (e.pointerId !== pointerId) return;
+      dragging = false; pointerId = -1;
+      if (canvas.hasPointerCapture(e.pointerId)) canvas.releasePointerCapture(e.pointerId);
+    }
+    canvas.addEventListener("pointerup", pointerUp);
+    canvas.addEventListener("pointercancel", pointerUp);
+    resetButton.addEventListener("click", () => { makeBodies(); canvas.focus(); });
+    addEventListener("keydown", e => {
+      if (e.key.toLowerCase() === "r") makeBodies();
+      if (e.key === " " || e.key === "Enter") { e.preventDefault(); setTarget(W / 2, H / 2, true); }
+    });
+    addEventListener("resize", resize);
+
+    function impulse(b, ix, iy, armX, armY, sign) {
+      b.vx += ix * b.invMass * sign;
+      b.vy += iy * b.invMass * sign;
+      b.av += (armX * iy - armY * ix) * b.invInertia * sign;
+    }
+
+    // 圆形包围体的冲量碰撞：含恢复系数、摩擦和角动量。
+    function collide(a, b, allowKick) {
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let distance = Math.hypot(dx, dy), minimum = a.r + b.r;
+      if (distance >= minimum) return;
+      if (distance < .001) { dx = Math.cos(a.i * 2.1); dy = Math.sin(a.i * 2.1); distance = 1; }
+      const nx = dx / distance, ny = dy / distance;
+      const invTotal = a.invMass + b.invMass;
+      const correction = Math.max(minimum - distance - .2, 0) * .58;
+      a.x -= nx * correction * a.invMass / invTotal; a.y -= ny * correction * a.invMass / invTotal;
+      b.x += nx * correction * b.invMass / invTotal; b.y += ny * correction * b.invMass / invTotal;
+
+      const rax = nx * a.r, ray = ny * a.r;
+      const rbx = -nx * b.r, rby = -ny * b.r;
+      let rvx = (b.vx - b.av * rby) - (a.vx - a.av * ray);
+      let rvy = (b.vy + b.av * rbx) - (a.vy + a.av * rax);
+      const normalSpeed = rvx * nx + rvy * ny;
+      if (normalSpeed > 0) return;
+
+      const restitution = .56;
+      const j = -(1 + restitution) * normalSpeed / invTotal;
+      const ix = nx * j, iy = ny * j;
+      impulse(a, ix, iy, rax, ray, -1); impulse(b, ix, iy, rbx, rby, 1);
+
+      rvx = (b.vx - b.av * rby) - (a.vx - a.av * ray);
+      rvy = (b.vy + b.av * rbx) - (a.vy + a.av * rax);
+      const tx = -ny, ty = nx;
+      const tangentSpeed = rvx * tx + rvy * ty;
+      const tangentDenominator = invTotal + a.r*a.r*a.invInertia + b.r*b.r*b.invInertia;
+      const frictionJ = clamp(-tangentSpeed / tangentDenominator, -j * .28, j * .28);
+      impulse(a, tx*frictionJ, ty*frictionJ, rax, ray, -1);
+      impulse(b, tx*frictionJ, ty*frictionJ, rbx, rby, 1);
+
+      if (allowKick && Math.abs(normalSpeed) > 34 && Math.random() < .66 && !reducedMotion) {
+        const kick = (Math.random() - .5) * Math.min(.9, Math.abs(normalSpeed) * .0045);
+        a.av -= kick * Math.sqrt(b.mass / a.mass); b.av += kick * Math.sqrt(a.mass / b.mass);
+      }
+    }
+
+    function bounds(b, allowKick) {
+      const bounce = .6; let impact = 0;
+      if (b.x - b.r < 0) { b.x = b.r; impact = Math.abs(b.vx); b.vx = Math.abs(b.vx) * bounce; }
+      else if (b.x + b.r > W) { b.x = W - b.r; impact = Math.abs(b.vx); b.vx = -Math.abs(b.vx) * bounce; }
+      if (b.y - b.r < 0) { b.y = b.r; impact = Math.max(impact, Math.abs(b.vy)); b.vy = Math.abs(b.vy) * bounce; }
+      else if (b.y + b.r > H) { b.y = H - b.r; impact = Math.max(impact, Math.abs(b.vy)); b.vy = -Math.abs(b.vy) * bounce; }
+      if (allowKick && impact > 45 && Math.random() < .55 && !reducedMotion) b.av += (Math.random() - .5) * Math.min(.9, impact * .004);
+    }
+
+    function simulate(dt) {
+      if (!active) return;
+      const substeps = 3, step = dt / substeps;
+      for (let sub = 0; sub < substeps; sub++) {
+        for (const b of bodies) {
+          const dx = target.x - b.x, dy = target.y - b.y;
+          let ax = dx * (reducedMotion ? 1.25 : 2.15) - b.vx * .84;
+          let ay = dy * (reducedMotion ? 1.25 : 2.15) - b.vy * .84;
+          const acceleration = Math.hypot(ax, ay), maximum = reducedMotion ? 440 : 920;
+          if (acceleration > maximum) { ax *= maximum / acceleration; ay *= maximum / acceleration; }
+          b.vx += ax * step; b.vy += ay * step;
+          const speed = Math.hypot(b.vx, b.vy);
+          if (!reducedMotion && speed > 80 && Math.random() < step * .55) b.av += (Math.random() - .5) * .17;
+          b.vx = clamp(b.vx, -820, 820); b.vy = clamp(b.vy, -820, 820); b.av = clamp(b.av, -3.2, 3.2);
+          b.x += b.vx * step; b.y += b.vy * step; b.a += b.av * step;
+        }
+        for (let pass = 0; pass < 3; pass++) {
+          for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) collide(bodies[i], bodies[j], sub === 0 && pass === 0);
+        }
+        for (const b of bodies) {
+          bounds(b, sub === 0);
+          b.vx *= Math.pow(.997, step * 60); b.vy *= Math.pow(.997, step * 60); b.av *= Math.pow(.995, step * 60);
+        }
+      }
+    }
+
+    function smooth(points) {
+      const first = points[0], last = points[points.length - 1];
+      ctx.beginPath(); ctx.moveTo((first[0]+last[0])/2, (first[1]+last[1])/2);
+      for (let i=0; i<points.length; i++) {
+        const p=points[i], n=points[(i+1)%points.length];
+        ctx.quadraticCurveTo(p[0], p[1], (p[0]+n[0])/2, (p[1]+n[1])/2);
+      }
+      ctx.closePath();
+    }
+
+    function radial(rx, ry, radii, rotation=-Math.PI/2) {
+      return radii.map((r,i) => { const a=rotation+i/radii.length*TAU; return [Math.cos(a)*rx*r, Math.sin(a)*ry*r]; });
+    }
+
+    function paint(color) {
+      ctx.fillStyle=color; ctx.fill(); ctx.strokeStyle="rgba(35,75,105,.12)"; ctx.lineWidth=1.1; ctx.stroke();
+    }
+
+    function drawBody(b) {
+      const s=b.s, rx=b.w/2, ry=b.h/2;
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.a); ctx.lineJoin="round";
+      if (s.kind === "circle" || s.kind === "composite") {
+        ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,TAU); paint(s.color);
+      } else if (s.kind === "roundRect") {
+        ctx.beginPath(); ctx.roundRect(-rx,-ry,b.w,b.h,s.corner*scale); paint(s.color);
+      } else if (s.kind === "poly") {
+        smooth(s.points.map(p=>[p[0]*b.w,p[1]*b.h])); paint(s.color);
+      } else if (s.kind === "flower") {
+        const radii=Array.from({length:s.petals*2},(_,i)=>i%2===0?1:s.inner);
+        smooth(radial(rx,ry,radii)); paint(s.color);
+      } else {
+        smooth(radial(rx,ry,s.radii)); paint(s.color);
+      }
+      if (s.kind === "composite") {
+        smooth(radial(b.w*.28,b.h*.285,[.96,1,.94,1,.97],-Math.PI/2-.07)); paint(s.innerColor);
+      }
+      ctx.restore();
+    }
+
+    function drawTarget(now) {
+      if (!active) return;
+      const p=clamp((now-pulseTime)/720,0,1), radius=22+p*54;
+      const glow=ctx.createRadialGradient(target.x,target.y,0,target.x,target.y,radius);
+      glow.addColorStop(0,"rgba(255,255,255,.28)"); glow.addColorStop(1,"rgba(255,255,255,0)");
+      ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(target.x,target.y,radius,0,TAU); ctx.fill();
+      ctx.fillStyle="rgba(34,91,133,.58)"; ctx.beginPath(); ctx.arc(target.x,target.y,4.2,0,TAU); ctx.fill();
+      if (p<1) { ctx.strokeStyle=`rgba(37,92,132,${.38*(1-p)})`; ctx.lineWidth=1.5; ctx.beginPath(); ctx.arc(target.x,target.y,11+p*42,0,TAU); ctx.stroke(); }
+    }
+
+    function frame(now) {
+      const dt=Math.min(Math.max((now-lastTime)/1000,.001),.03); lastTime=now;
+      simulate(dt); ctx.clearRect(0,0,W,H); drawTarget(now); for (const b of bodies) drawBody(b);
+      requestAnimationFrame(frame);
+    }
+
+    layout(); makeBodies(); requestAnimationFrame(frame);
+  })();
+  </script>
+</body>
+</html>
