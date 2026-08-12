@@ -32,6 +32,22 @@
   font-style: normal;
   font-display: swap;
 }
+/* JetBrains Mono — latin subset from Google Fonts. Served as a
+   variable font: one file, weights picked by the descriptors. */
+@font-face {
+  font-family: "JetBrainsMono";
+  src: url("../res/fonts/jetbrains_mono.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "JetBrainsMono";
+  src: url("../res/fonts/jetbrains_mono.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* ===========================================
    THEME TOKENS — tropical indoor plant palette
@@ -48,6 +64,7 @@
   --font-serif: "AnthropicSerif", Georgia, serif;
   --font-sans: "AnthropicSans", "Helvetica Neue", Arial, sans-serif;
   --font-mono: "AnthropicMono", "SFMono-Regular", Consolas, monospace;
+  --font-jetbrains: "JetBrainsMono", "SFMono-Regular", Consolas, monospace;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --slide-pad-x: clamp(16px, 9.375vw, 180px);
@@ -84,22 +101,31 @@ img, video, canvas, svg { max-width: 100%; max-height: 100%; }
 /* ===========================================
    HERO GROUND — dot grid in warm amber + cream
    text halo so type stays readable when the
-   physics shapes drift underneath. (text-shadow
-   is inherited: one rule covers all hero text.)
+   physics shapes drift underneath. The halo is
+   a --halo variable in em units: each hero text
+   element re-resolves it against its own font
+   size, so small labels get a small halo and
+   the big name keeps a strong one.
    =========================================== */
 .hero {
   background-color: var(--cream);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='3' height='3' x='23.5' y='23.5' fill='%23dda15e' fill-opacity='0.7'/%3E%3C/svg%3E");
   background-size: 50px 50px;
-  text-shadow:
-    -2px -2px 0 var(--cream),
-     2px -2px 0 var(--cream),
-    -2px  2px 0 var(--cream),
-     2px  2px 0 var(--cream),
-     0 0 8px var(--cream),
-     0 0 18px var(--cream),
-     0 0 32px var(--cream);
+  --halo:
+    -0.04em -0.04em 0 var(--cream),
+     0.04em -0.04em 0 var(--cream),
+    -0.04em  0.04em 0 var(--cream),
+     0.04em  0.04em 0 var(--cream),
+     0 0 0.12em var(--cream),
+     0 0 0.28em var(--cream),
+     0 0 0.5em var(--cream);
+  text-shadow: var(--halo);
 }
+/* every hero text element opts into the halo (inheritance would
+   otherwise pass along the parent's resolved px values instead of
+   re-scaling the ems to the element's own size) */
+.hero h1, .hero h1 .name, .hero .subtitle, .hero .fact .k,
+.hero .fact .v, .hero .fact .v em, .hero .pull { text-shadow: var(--halo); }
 
 /* ===========================================
    COMPOSITION — centered name card. Type sizes
@@ -118,7 +144,7 @@ h1 em { font-style: italic; }
 .hero h1 { font-size: clamp(28px, 4.375vw, 84px); }
 .hero h1 .name { display: block; font-size: clamp(44px, 10.9375vw, 210px); line-height: 1.02; margin-top: clamp(6px, 0.63vw, 12px); }
 
-.subtitle { margin: clamp(16px, 2.29vw, 44px) 0 0; color: var(--muted); font-family: var(--font-sans); font-size: clamp(15px, 1.51vw, 29px); line-height: 1.6; }
+.subtitle { margin: clamp(16px, 2.29vw, 44px) 0 0; color: var(--muted); font-family: var(--font-jetbrains); font-size: clamp(15px, 1.51vw, 29px); line-height: 1.6; }
 .subtitle .accent { color: var(--accent); }
 .accent { color: var(--accent); }
 
@@ -175,6 +201,21 @@ h1 em { font-style: italic; }
   pointer-events: none;
   opacity: 0;
   /* clip-path: path(evenodd, "…") — set by JS while scrolling */
+}
+
+/* the handle, centered on the closed curtain. The cog window eats
+   it as it grows, so the tag vanishes with the cover. */
+.pre-tag {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-jetbrains);
+  font-weight: 400;
+  font-size: clamp(18px, 2.08vw, 40px);
+  letter-spacing: 0.04em;
+  color: var(--cream);
+  /* the .hero halo is inherited and reads as a blur on the flat
+     cover — the olive background needs no halo for contrast */
+  text-shadow: none;
 }
 
 /* ===========================================

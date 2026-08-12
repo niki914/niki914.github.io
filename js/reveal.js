@@ -23,22 +23,23 @@
       over: 1.06,                  /* margin so valleys clear the far corners */
       points: [[-.2,-.5],[.27,-.44],[.46,-.2],[.49,.24],[.14,.5],[-.33,.42],[-.5,.12],[-.46,-.3]],
     },
-    /* was REVEAL_DELAY = 200 ms → text starts at p = 0.74, when the
-       cover is ease(0.74/0.78) = 99.6% open ("幕揭开的差不多才开始").
-       Each window keeps the old relative stagger (--d) and duration,
-       normalized into the [0.74, 1.0] budget — the last element lands
-       exactly at p = 1.0, where the hero unpins for the next page. */
+    /* text starts at p = 0.45 — the facts and name animate in while
+       the window is still growing. Each window keeps the old relative
+       stagger (--d) and duration, but the whole sequence is shifted
+       (not stretched) to start at 0.45: it ends at p ≈ 0.71, well
+       before the curtain finishes opening at 0.78 — a beat of full
+       stillness before the next page slides up. */
     ease: (t) => 0.5 - 0.5 * Math.cos(Math.PI * Math.min(t, 1)),
     els: [
-      { id: "f0",   kind: "pop",  s: .740, e: .831 },  // --d 0s   pop .7s
-      { id: "f1",   kind: "pop",  s: .760, e: .851 },  // --d .15s
-      { id: "w0",   kind: "w",    s: .766, e: .883 },  // --d .2s  w .9s
-      { id: "w1",   kind: "w",    s: .779, e: .896 },  // --d .3s
-      { id: "f2",   kind: "pop",  s: .779, e: .870 },  // --d .3s
-      { id: "w2",   kind: "w",    s: .799, e: .916 },  // --d .45s
-      { id: "f3",   kind: "pop",  s: .799, e: .890 },  // --d .45s
-      { id: "sub",  kind: "fade", s: .831, e: .948 },  // --d .7s fade .9s
-      { id: "pull", kind: "wipe", s: .857, e: 1.000 }  // --d .9s wipe 1.1s
+      { id: "f0",   kind: "pop",  s: .450, e: .541 },  // --d 0s   pop .7s
+      { id: "f1",   kind: "pop",  s: .470, e: .561 },  // --d .15s
+      { id: "w0",   kind: "w",    s: .476, e: .593 },  // --d .2s  w .9s
+      { id: "w1",   kind: "w",    s: .489, e: .606 },  // --d .3s
+      { id: "f2",   kind: "pop",  s: .489, e: .580 },  // --d .3s
+      { id: "w2",   kind: "w",    s: .509, e: .626 },  // --d .45s
+      { id: "f3",   kind: "pop",  s: .509, e: .600 },  // --d .45s
+      { id: "sub",  kind: "fade", s: .541, e: .658 },  // --d .7s fade .9s
+      { id: "pull", kind: "wipe", s: .567, e: .710 }   // --d .9s wipe 1.1s
     ],
   };
 
@@ -77,13 +78,19 @@
     return d + " Z";
   }
 
+  /* the cog window at progress p — center (bottom-right corner),
+     scale and spin */
+  function cogWindowAt(p) {
+    const e = CONFIG.ease(p / CONFIG.curtainEnd);
+    return { cx: cover.W, cy: cover.H, s: cover.s1 * e, phi: CONFIG.cover.baseAngle + CONFIG.cover.rot * e };
+  }
+
   /* the cover: full rect with the cog punched out of it
      (evenodd → the cog's interior is the transparent window) */
   function coverClipPath(p) {
-    const { W, H, s1 } = cover;
-    const e = CONFIG.ease(p / CONFIG.curtainEnd);
-    const cog = cogPath(W, H, s1 * e, CONFIG.cover.baseAngle + CONFIG.cover.rot * e);
-    return `path(evenodd, "M 0 0 L ${W} 0 L ${W} ${H} L 0 ${H} Z ${cog}")`;
+    const w = cogWindowAt(p);
+    const cog = cogPath(w.cx, w.cy, w.s, w.phi);
+    return `path(evenodd, "M 0 0 L ${cover.W} 0 L ${cover.W} ${cover.H} L 0 ${cover.H} Z ${cog}")`;
   }
 
   /* ==== per-element render — inline styles, NO CSS transitions
