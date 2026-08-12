@@ -1,0 +1,188 @@
+/* ===========================================
+   PERSONAL HOMEPAGE — scroll-driven hero.
+   Theme: Anthropic fonts (../res/fonts),
+   T7 editorial language in olive & cream:
+   deep olive green, warm cream, amber.
+   =========================================== */
+@font-face {
+  font-family: "AnthropicSerif";
+  src: url("../res/fonts/anthropic_serif_roman.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "AnthropicSerif";
+  src: url("../res/fonts/anthropic_serif_italic.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "AnthropicSans";
+  src: url("../res/fonts/anthropic_sans_roman.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "AnthropicMono";
+  src: url("../res/fonts/anthropic_mono_roman.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===========================================
+   THEME TOKENS — tropical indoor plant palette
+   =========================================== */
+:root {
+  --ink: #606c38;            /* olive green */
+  --icon: #283618;           /* deep olive ink */
+  --accent: #bc6c25;         /* amber */
+  --cream: #fefae0;          /* warm cream */
+  --muted: #606c38;          /* muted olive */
+  --faint: rgba(96, 108, 56, 0.55);
+  --hairline: rgba(96, 108, 56, 0.16);
+
+  --font-serif: "AnthropicSerif", Georgia, serif;
+  --font-sans: "AnthropicSans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "AnthropicMono", "SFMono-Regular", Consolas, monospace;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --slide-pad-x: clamp(16px, 9.375vw, 180px);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ===========================================
+   LAYOUT — normal document flow. The hero is a
+   sticky full-screen panel pinned inside a tall
+   wrap: the first 140vh of scrolling drive the
+   reveal, the next 100vh let the next page
+   slide up over the still-pinned hero.
+   =========================================== */
+html {
+  /* no elastic bounce at the top (and bottom) of the page */
+  overscroll-behavior-y: none;
+  /* any residual overscroll paints the canvas: olive near the top
+     (cover-colored, so a bounce at the top shows cover, not cream)
+     and cream below, so the bottom of the page bounces cleanly */
+  background: linear-gradient(180deg, #4c5a3a 0%, #39432e 30vh, var(--cream) calc(30vh + 1px), var(--cream));
+}
+body { margin: 0; background: var(--cream); }
+img, video, canvas, svg { max-width: 100%; max-height: 100%; }
+
+.hero-wrap { position: relative; height: 240vh; height: 240dvh; }
+
+.hero {
+  position: sticky; top: 0;
+  height: 100vh; height: 100dvh;
+  overflow: hidden;
+}
+
+/* ===========================================
+   HERO GROUND — dot grid in warm amber + cream
+   text halo so type stays readable when the
+   physics shapes drift underneath. (text-shadow
+   is inherited: one rule covers all hero text.)
+   =========================================== */
+.hero {
+  background-color: var(--cream);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='50' height='50'%3E%3Crect width='3' height='3' x='23.5' y='23.5' fill='%23dda15e' fill-opacity='0.7'/%3E%3C/svg%3E");
+  background-size: 50px 50px;
+  text-shadow:
+    -2px -2px 0 var(--cream),
+     2px -2px 0 var(--cream),
+    -2px  2px 0 var(--cream),
+     2px  2px 0 var(--cream),
+     0 0 8px var(--cream),
+     0 0 18px var(--cream),
+     0 0 32px var(--cream);
+}
+
+/* ===========================================
+   COMPOSITION — centered name card. Type sizes
+   are design-px × (100 / 1920) vw, each with a
+   clamp floor so phones stay legible.
+   =========================================== */
+.hero-content {
+  position: relative; z-index: 1; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 0 var(--slide-pad-x);
+}
+.hero-content > * { width: fit-content; max-width: 1500px; }
+
+h1 { margin: 0; color: var(--icon); font-family: var(--font-serif); font-weight: 400; line-height: 1.15; letter-spacing: 0; }
+h1 em { font-style: italic; }
+.hero h1 { font-size: clamp(28px, 4.375vw, 84px); }
+.hero h1 .name { display: block; font-size: clamp(44px, 10.9375vw, 210px); line-height: 1.02; margin-top: clamp(6px, 0.63vw, 12px); }
+
+.subtitle { margin: clamp(16px, 2.29vw, 44px) 0 0; color: var(--muted); font-family: var(--font-sans); font-size: clamp(15px, 1.51vw, 29px); line-height: 1.6; }
+.subtitle .accent { color: var(--accent); }
+.accent { color: var(--accent); }
+
+.pull { margin: clamp(20px, 2.92vw, 56px) 0 0; font-family: var(--font-serif); font-style: italic; font-size: clamp(17px, 2.083vw, 40px); line-height: 1.3; color: var(--icon); }
+.pull .accent { color: var(--accent); }
+
+/* === facts: four columns, hairline dividers, wrap on narrow screens === */
+.facts {
+  display: flex; flex-wrap: wrap; align-items: stretch; justify-content: center;
+  margin-top: clamp(28px, 3.96vw, 76px); width: fit-content; max-width: 1560px;
+}
+.fact { flex: 0 0 clamp(150px, 18.75vw, 360px); padding: 0 clamp(12px, 2.08vw, 40px); border-right: 1px solid var(--hairline); }
+.fact:last-child { border-right: none; }
+.fact .k { font-family: var(--font-mono); font-size: clamp(11px, 0.99vw, 19px); letter-spacing: 0.05em; color: var(--faint); margin-bottom: clamp(8px, 0.83vw, 16px); }
+.fact .k .accent { color: var(--accent); }
+.fact .v { font-family: var(--font-serif); font-size: clamp(17px, 2.083vw, 40px); line-height: 1.4; color: var(--icon); }
+.fact .v em { font-style: italic; color: var(--muted); font-size: clamp(14px, 1.72vw, 33px); }
+
+/* short landscape viewports: compress so the card fits without clipping */
+@media (max-height: 640px) {
+  .hero h1 .name { font-size: clamp(34px, 6.5vw, 120px); margin-top: 4px; }
+  .subtitle { margin-top: 12px; }
+  .facts { margin-top: 14px; }
+  .fact .v { font-size: clamp(14px, 2.08vw, 26px); }
+  .pull { margin-top: 14px; }
+}
+
+/* ===========================================
+   FX LAYER — physics shapes between the dot
+   ground and the type layer. Logical 1920×1080
+   world, contain-fitted by JS on resize.
+   =========================================== */
+.fx-layer {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%;
+  max-width: none; max-height: none;
+  pointer-events: none;
+}
+
+/* ===========================================
+   PRE PAGE — olive cover cut open by a cog.
+   A full-screen #424d31 sheet, blank, no gear
+   graphic of its own: JS punches a window in
+   the shape of the amber cog out of it and
+   grows the window with scroll progress.
+   opacity: 0 by default (no-JS → hero visible);
+   JS flips it on with the closed cover set
+   before first paint.
+   =========================================== */
+.pre {
+  position: absolute; inset: 0; z-index: 500;
+  background:
+    radial-gradient(130% 130% at 50% 26%, #4c5a3a 0%, #424d31 56%, #39432e 100%);
+  pointer-events: none;
+  opacity: 0;
+  /* clip-path: path(evenodd, "…") — set by JS while scrolling */
+}
+
+/* ===========================================
+   NEXT PAGE — plain cream, no dots. Slides up
+   over the pinned hero at the end of the
+   reveal, then takes over the screen.
+   =========================================== */
+.next {
+  position: relative; z-index: 1;
+  min-height: 100vh; background: var(--cream);
+}
