@@ -93,6 +93,34 @@
     return `path(evenodd, "M 0 0 L ${cover.W} 0 L ${cover.W} ${cover.H} L 0 ${cover.H} Z ${cog}")`;
   }
 
+  /* whether the cog window has grown over a screen point — the tile
+     becomes clickable the moment all four of its corners are inside
+     the window, and only stops being clickable after the window has
+     shrunk 6% more, so a scroll jitter at the edge can't flicker the
+     cursor. The polygon test over the cog's 8 vertices approximates
+     the smoothed silhouette closely enough for a gate. */
+  function cogCoversPoint(p, x, y, margin) {
+    const w = cogWindowAt(p);
+    const s = w.s * margin;
+    const dx = x - w.cx, dy = y - w.cy;
+    const c = Math.cos(-w.phi), sn = Math.sin(-w.phi);
+    const lx = (dx * c - dy * sn) / s, ly = (dx * sn + dy * c) / s;
+    const pts = CONFIG.cover.points;
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const xi = pts[i][0], yi = pts[i][1], xj = pts[j][0], yj = pts[j][1];
+      if (((yi > ly) !== (yj > ly)) && lx < (xj - xi) * (ly - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function tileFullyInCog(p, el, margin) {
+    const r = el.getBoundingClientRect();
+    return (cogCoversPoint(p, r.left,  r.top,    margin) &&
+            cogCoversPoint(p, r.right, r.top,    margin) &&
+            cogCoversPoint(p, r.left,  r.bottom, margin) &&
+            cogCoversPoint(p, r.right, r.bottom, margin));
+  }
+
   /* ==== per-element render — inline styles, NO CSS transitions
          (per-frame writes and transitions would fight) ==== */
   function renderEl(c, k) {
@@ -117,6 +145,14 @@
          The reveal range is the wrap's pinned range, measured at
          runtime: (wrap height − viewport height). ==== */
   let lastP = -1, physics = null;
+  /* interactive floaters (`.fx-link` hotspots, created by physics.js)
+     are clickable once the cog window has uncovered them; before that
+     the cover is pointer-transparent, so without this gate a click on
+     the closed curtain could hit a hidden icon. Each tile is gated by
+     its own geometry, with a small scale margin on the disable side so
+     scroll jitter at the boundary can't flicker the cursor. */
+  let fxLinks = [];
+  const linkOpen = new Map();   // element → clickable state
   function readProgress() {
     const r = wrap.getBoundingClientRect();
     return clamp(-r.top / (r.height - innerHeight), 0, 1);
@@ -124,6 +160,13 @@
   function tick(now) {
     if (physics) physics.tick(now);
     const p = readProgress();
+    /* each tile is clickable from the moment the cog window uncovers
+       it — no need to wait for the curtain to finish opening */
+    for (const el of fxLinks) {
+      const was = linkOpen.get(el) || false;
+      if (!was && tileFullyInCog(p, el, 1)) { linkOpen.set(el, true); el.style.pointerEvents = "auto"; }
+      else if (was && !tileFullyInCog(p, el, .94)) { linkOpen.set(el, false); el.style.pointerEvents = "none"; }
+    }
     if (Math.abs(p - lastP) > 1e-4) {   // dirty guard: no style churn when idle
       lastP = p;
       pre.style.clipPath = coverClipPath(p);
@@ -156,6 +199,7 @@
   if (window.__physics && fx) {
     physics = window.__physics.createFxLayer(fx);
     physics.resize();
+    fxLinks = [...document.querySelectorAll(".fx-link")];   // anchors created by physics.js
     window.addEventListener("resize", () => { refitCover(); physics.resize(); });
   } else {
     window.addEventListener("resize", refitCover);

@@ -52,7 +52,15 @@ window.__physics = (() => {
        position, w/h/r = size in stage pixels (× shapeScale). */
     const specs = [
       { kind:"flower", x:300, y:210, w:126, h:123, r:52, color:"rgba(221,161,94,.85)", petals:9, inner:.70, angle:-.08 },
-      { kind:"roundRect", x:1560, y:240, w:186, h:182, r:83, color:"rgba(96,108,56,.85)", corner:40, angle:.03 },
+      { kind:"roundRect", x:1560, y:240, w:186, h:182, r:83, color:"rgba(96,108,56,.85)", corner:40, angle:.03,
+        /* interactive floater: `link` makes the shape a hotspot (whole
+           shape clickable, opens in a new tab), `img` embeds a glyph
+           inside its silhouette — a linked glyph is punched out so the
+           page shows through it. Adding another easter-egg floater =
+           one spec entry with link/img/label. */
+        link:"https://www.linkedin.com/in/houman-dang-niki/",
+        label:"LinkedIn — Houman Dang's profile",
+        img:"res/images/linkedin.png" },
       { kind:"poly", x:560, y:430, w:121, h:171, r:63, color:"rgba(188,108,37,.85)", angle:-.16,
         points:[[-.2,-.5],[.27,-.44],[.46,-.2],[.49,.24],[.14,.5],[-.33,.42],[-.5,.12],[-.46,-.3]] },
       { kind:"poly", x:1240, y:470, w:127, h:130, r:55, color:"rgba(163,177,138,.85)", angle:-.04,
@@ -102,6 +110,30 @@ window.__physics = (() => {
       a.ampY = Math.min(a.ampY, cap);
     }
 
+    /* interactive floaters — generic: any body whose spec carries
+       `img` gets that image drawn inside its silhouette; any body
+       whose spec carries `link` gets a transparent <a> hotspot glued
+       to it (whole shape clickable, opens in a new tab). Anchors are
+       created here, so the spec is the single source of truth. */
+    for (const b of bodies) {
+      if (!b.s.img) continue;
+      const im = new Image();
+      im.src = b.s.img;
+      b.img = im;
+    }
+    const linkPairs = [];
+    for (const b of bodies) {
+      if (!b.s.link) continue;
+      const a = document.createElement("a");
+      a.className = "fx-link";
+      a.href = b.s.link;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.setAttribute("aria-label", b.s.label || b.s.link);
+      canvas.parentElement.appendChild(a);
+      linkPairs.push({ b, a });
+    }
+
     function simulate(t) {   // t in seconds — x, y, a are pure functions of t
       const driftK = reducedMotion ? GENTLE.drift : 1;
       const tiltK = reducedMotion ? GENTLE.tilt : 1;
@@ -133,23 +165,43 @@ window.__physics = (() => {
       ctx.fillStyle=color; ctx.fill(); ctx.strokeStyle="rgba(40,54,24,.14)"; ctx.lineWidth=1.1; ctx.stroke();
     }
 
-    function drawBody(b) {
+    /* build the silhouette path for any shape kind — shared by the
+       fill and by the clip that embeds a glyph image inside it */
+    function tracePath(b) {
       const s=b.s, rx=b.w/2, ry=b.h/2;
-      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.a); ctx.lineJoin="round";
       if (s.kind === "circle" || s.kind === "composite") {
-        ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,TAU); paint(s.color);
+        ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,TAU);
       } else if (s.kind === "roundRect") {
-        ctx.beginPath(); ctx.roundRect(-rx,-ry,b.w,b.h,s.corner); paint(s.color);
+        ctx.beginPath(); ctx.roundRect(-rx,-ry,b.w,b.h,s.corner);
       } else if (s.kind === "poly") {
-        smooth(s.points.map(p=>[p[0]*b.w,p[1]*b.h])); paint(s.color);
+        smooth(s.points.map(p=>[p[0]*b.w,p[1]*b.h]));
       } else if (s.kind === "flower") {
         const radii=Array.from({length:s.petals*2},(_,i)=>i%2===0?1:s.inner);
-        smooth(radial(rx,ry,radii)); paint(s.color);
+        smooth(radial(rx,ry,radii));
       } else {
-        smooth(radial(rx,ry,s.radii)); paint(s.color);
+        smooth(radial(rx,ry,s.radii));
       }
+    }
+
+    function drawBody(b) {
+      const s=b.s;
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.a); ctx.lineJoin="round";
+      tracePath(b); paint(s.color);
       if (s.kind === "composite") {
         smooth(radial(b.w*.28,b.h*.285,[.96,1,.94,1,.97],-Math.PI/2-.07)); paint(s.innerColor);
+      }
+      if (b.img && b.img.complete && b.img.naturalWidth) {
+        ctx.save();
+        tracePath(b); ctx.clip();
+        const pad = Math.min(b.w, b.h) * .13;
+        const fit = Math.min((b.w - 2*pad) / b.img.width, (b.h - 2*pad) / b.img.height);
+        const dw = b.img.width * fit, dh = b.img.height * fit;
+        /* a linked glyph is punched out (destination-out erases where
+           the source is opaque) → hollow letters, the page shows
+           through; a plain glyph is drawn on top of the fill */
+        ctx.globalCompositeOperation = s.link ? "destination-out" : "source-over";
+        ctx.drawImage(b.img, -dw/2, -dh/2, dw, dh);
+        ctx.restore();
       }
       ctx.restore();
     }
@@ -172,6 +224,17 @@ window.__physics = (() => {
       simulate(now / 1000);
       ctx.clearRect(0, 0, W, H);
       for (const b of bodies) drawBody(b);
+      /* keep each hotspot glued to its shape: the same world→screen
+         fit the canvas uses, so the clickable area is the shape */
+      for (const { b, a } of linkPairs) {
+        const cw = b.w * f, ch = b.h * f;
+        a.style.left = (b.x * f + ox - cw / 2) + "px";
+        a.style.top = (b.y * f + oy - ch / 2) + "px";
+        a.style.width = cw + "px";
+        a.style.height = ch + "px";
+        a.style.transform = "rotate(" + b.a + "rad)";
+        a.style.borderRadius = b.s.corner ? (b.s.corner * f).toFixed(1) + "px" : "";
+      }
     }
 
     return { resize, tick };
