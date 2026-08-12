@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Nexus gives the phone assistant back to the user by connecting it to their own model, memory and tools.">
+<title>Nexus - Your assistant, your model, your phone</title>
+<style>
+:root {
+  color-scheme: light;
+  --paper: #f5f6f2;
+  --paper-2: #ecefea;
+  --ink: #101418;
+  --ink-soft: #384049;
+  --muted: #68717a;
+  --line: rgba(16, 20, 24, 0.14);
+  --line-strong: rgba(16, 20, 24, 0.34);
+  --accent: #255f73;
+  --shadow: rgba(12, 18, 24, 0.14);
+  --dark: #111418;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(16, 20, 24, 0.03) 1px, transparent 1px) 0 0 / 96px 96px,
+    linear-gradient(180deg, var(--paper), #ffffff 36%, var(--paper-2));
+  color: var(--ink);
+  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+a { color: inherit; }
+button { font: inherit; }
+img { display: block; max-width: 100%; }
+.site-shell { position: relative; height: 100dvh; }
+.site-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px clamp(20px, 3vw, 42px);
+  pointer-events: none;
+}
+.brand-lockup, .header-links { pointer-events: auto; }
+.brand-lockup { display: inline-flex; align-items: center; gap: 14px; text-decoration: none; }
+.brand-mark { width: 10px; height: 10px; border-radius: 999px; background: var(--ink); }
+.brand-name { font-size: 19px; font-weight: 780; letter-spacing: -0.05em; }
+.header-links { display: flex; align-items: center; gap: 22px; font-size: 13px; color: var(--ink-soft); }
+.header-links a { text-decoration: none; }
+.header-links a:hover { color: var(--accent); }
+.snap-shell {
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scroll-snap-type: y mandatory;
+}
+.panel {
+  min-height: 100dvh;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  position: relative;
+  padding: clamp(86px, 10vw, 116px) clamp(22px, 4vw, 58px) clamp(30px, 5vw, 54px);
+  display: flex;
+  align-items: center;
+}
+.panel-inner { width: min(1400px, 100%); margin: 0 auto; }
+.hero-grid, .dual-grid, .platform-grid, .final-grid {
+  display: grid;
+  gap: clamp(28px, 4vw, 68px);
+}
+.hero-grid { grid-template-columns: minmax(0, 1.1fr) minmax(340px, 0.78fr); align-items: center; }
+.dual-grid { grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr); align-items: center; }
+.platform-grid { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); align-items: start; }
+.final-grid { grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr); align-items: end; }
+.kicker {
+  display: inline-block;
+  margin-bottom: 22px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+h1, h2 {
+  margin: 0;
+  font-family: ui-serif, Georgia, "Times New Roman", serif;
+  font-weight: 520;
+  letter-spacing: -0.07em;
+}
+h1 {
+  max-width: 920px;
+  font-size: clamp(58px, 8.3vw, 128px);
+  line-height: 0.9;
+}
+h2 {
+  max-width: 900px;
+  font-size: clamp(46px, 6.2vw, 92px);
+  line-height: 0.95;
+}
+p { margin: 0; color: var(--ink-soft); }
+.hero-lede {
+  max-width: 620px;
+  margin-top: 28px;
+  font-size: clamp(19px, 2.1vw, 26px);
+  line-height: 1.42;
+}
+.copy-large {
+  max-width: 1080px;
+  font-size: clamp(24px, 2.8vw, 40px);
+  line-height: 1.3;
+}
+.copy-body, .closing-note {
+  max-width: 680px;
+  font-size: 19px;
+  line-height: 1.72;
+}
+.actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  border: 1px solid var(--ink);
+  text-decoration: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
+}
+.button.primary { background: var(--ink); color: #ffffff; }
+.button:hover { transform: translateY(-1px); }
+.button:active { transform: translateY(1px); }
+.figure-frame {
+  border: 1px solid var(--line-strong);
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.74), rgba(255,255,255,0.28));
+  box-shadow: 0 32px 90px var(--shadow);
+}
+.figure-frame img {
+  width: 100%;
+  height: min(54dvh, 520px);
+  object-fit: cover;
+}
+.hero-figure .figure-frame img {
+  height: min(50dvh, 460px);
+}
+.figure-note {
+  max-width: 220px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ink);
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.wide-figure { border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); padding: 12px 0; }
+.wide-figure img {
+  width: 100%;
+  height: min(42dvh, 360px);
+  object-fit: cover;
+}
+.rule-list { margin-top: 30px; border-top: 1px solid var(--line-strong); }
+.rule-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 0.34fr) 1fr;
+  gap: 26px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+.rule-row strong { font-size: 18px; letter-spacing: -0.02em; }
+.rule-row span { color: var(--muted); font-size: 17px; line-height: 1.55; }
+.dark-panel {
+  width: 100%;
+  min-height: calc(100dvh - clamp(120px, 12vw, 160px));
+  margin: 0 calc(clamp(22px, 4vw, 58px) * -1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background: var(--dark);
+  color: #f2f6f7;
+}
+.dark-copy {
+  padding: clamp(34px, 5vw, 78px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.dark-copy h2 { max-width: 760px; }
+.dark-copy p {
+  max-width: 620px;
+  margin-top: 24px;
+  color: rgba(242, 246, 247, 0.74);
+  font-size: 20px;
+  line-height: 1.68;
+}
+.dark-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 30px;
+}
+.dark-image img {
+  width: 100%;
+  max-width: 520px;
+  height: min(44dvh, 360px);
+  object-fit: contain;
+  opacity: 0.96;
+}
+.feature-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 40px;
+  border-top: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+}
+.feature-col {
+  min-height: 280px;
+  padding: 28px 22px;
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.feature-col:last-child { border-right: 0; }
+.feature-col strong { display: block; max-width: 220px; font-size: 24px; letter-spacing: -0.04em; }
+.feature-col p { margin-top: 26px; color: var(--muted); font-size: 16px; line-height: 1.56; }
+.platform-aside {
+  padding-top: 18px;
+  border-top: 1px solid var(--ink);
+  font-size: 23px;
+  line-height: 1.4;
+}
+.timeline { margin-top: 28px; border-top: 1px solid var(--line-strong); }
+.timeline-row {
+  display: grid;
+  grid-template-columns: 170px 1fr;
+  gap: 24px;
+  padding: 22px 0;
+  border-bottom: 1px solid var(--line);
+}
+.timeline-row strong { color: var(--accent); font-size: 15px; letter-spacing: 0.04em; }
+.timeline-row span { color: var(--ink-soft); line-height: 1.6; }
+.page-footer {
+  position: absolute;
+  left: clamp(22px, 4vw, 58px);
+  right: clamp(22px, 4vw, 58px);
+  bottom: 26px;
+  display: flex;
+  justify-content: space-between;
+  gap: 22px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.pager {
+  position: fixed;
+  top: 50%;
+  right: clamp(14px, 2vw, 28px);
+  z-index: 40;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pager button {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(16, 20, 24, 0.34);
+  background: rgba(255, 255, 255, 0.56);
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.pager button.active {
+  background: var(--ink);
+  border-color: var(--ink);
+  transform: scale(1.18);
+}
+.pager button:hover { transform: scale(1.12); }
+@media (prefers-reduced-motion: no-preference) {
+  .hero-copy, .hero-figure, .panel-copy, .panel-figure { animation: rise 0.72s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .hero-figure, .panel-figure { animation-delay: 0.08s; }
+  .feature-col { transition: background 0.22s ease, transform 0.22s ease; }
+  .feature-col:hover { background: rgba(255,255,255,0.48); transform: translateY(-3px); }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+}
+@media (max-width: 980px) {
+  .hero-grid, .dual-grid, .platform-grid, .final-grid, .dark-panel { grid-template-columns: 1fr; }
+  .figure-frame img, .wide-figure img, .hero-figure .figure-frame img { height: auto; aspect-ratio: 4 / 3; }
+  .dark-panel { min-height: auto; }
+  .feature-strip { grid-template-columns: 1fr 1fr; }
+  .feature-col:nth-child(2) { border-right: 0; }
+}
+@media (max-width: 720px) {
+  .panel { padding-top: 88px; padding-bottom: 58px; }
+  .header-links { display: none; }
+  .feature-strip, .rule-row, .timeline-row { grid-template-columns: 1fr; }
+  .feature-col { border-right: 0; border-bottom: 1px solid var(--line); min-height: 220px; }
+  .feature-col:last-child { border-bottom: 0; }
+  .page-footer { position: static; margin-top: 24px; flex-direction: column; }
+  .pager { right: 10px; gap: 8px; }
+}
+</style>
+</head>
+<body>
+<div class="site-shell">
+  <header class="site-header">
+    <a class="brand-lockup" href="#panel-1" aria-label="Nexus home">
+      <span class="brand-mark"></span>
+      <span class="brand-name">Nexus</span>
+    </a>
+    <nav class="header-links" aria-label="Section links">
+      <a href="#panel-2">Why</a>
+      <a href="#panel-3">Actions</a>
+      <a href="#panel-6">Platform</a>
+    </nav>
+  </header>
+
+  <nav class="pager" aria-label="Page sections">
+    <button type="button" data-index="0" class="active" aria-label="Go to section 1"></button>
+    <button type="button" data-index="1" aria-label="Go to section 2"></button>
+    <button type="button" data-index="2" aria-label="Go to section 3"></button>
+    <button type="button" data-index="3" aria-label="Go to section 4"></button>
+    <button type="button" data-index="4" aria-label="Go to section 5"></button>
+    <button type="button" data-index="5" aria-label="Go to section 6"></button>
+    <button type="button" data-index="6" aria-label="Go to section 7"></button>
+  </nav>
+
+  <main class="snap-shell" id="snap-shell">
+    <section class="panel" id="panel-1" data-panel>
+      <div class="panel-inner hero-grid">
+        <div class="hero-copy">
+          <span class="kicker">Your everyday assistant, on your terms</span>
+          <h1>Give your phone assistant a real mind.</h1>
+          <p class="hero-lede">Nexus connects the assistant you already use to your own model, memory and tools.</p>
+          <div class="actions">
+            <a class="button primary" href="#panel-3">See what it can do</a>
+            <a class="button" href="#panel-6">Why it scales</a>
+          </div>
+        </div>
+        <div class="hero-figure">
+          <div class="figure-frame">
+            <img src="assets/images/using_mcp.jpg" alt="Nexus showing MCP usage inside the app">
+          </div>
+          <div class="figure-note">A familiar voice entry point becomes a personal action layer for the whole phone.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-2" data-panel>
+      <div class="panel-inner">
+        <span class="kicker">A simple idea with a larger shift behind it</span>
+        <h2>The assistant should belong to the person holding the phone.</h2>
+        <p class="copy-large" style="margin-top:30px;">Most phone assistants are fixed products. Nexus turns that relationship around: you choose the model, decide what it remembers and define what it is allowed to do.</p>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-3" data-panel>
+      <div class="panel-inner dual-grid">
+        <div class="panel-figure wide-figure">
+          <img src="assets/images/memory.jpg" alt="Nexus memory screen">
+        </div>
+        <div class="panel-copy">
+          <span class="kicker">What changes in practice</span>
+          <h2>One sentence can become a phone action.</h2>
+          <p class="copy-body" style="margin-top: 24px;">Nexus goes beyond better answers. It gives the assistant a runtime for memory, built in tools, custom shell tools and external MCP services.</p>
+          <div class="rule-list">
+            <div class="rule-row"><strong>Open what you need</strong><span>Launch apps or jump to websites from a natural request.</span></div>
+            <div class="rule-row"><strong>Remember preferences</strong><span>Store useful facts so future conversations start with context.</span></div>
+            <div class="rule-row"><strong>Run trusted routines</strong><span>Wrap commands you understand into reusable tools for the assistant.</span></div>
+            <div class="rule-row"><strong>Reach outside the phone</strong><span>Connect HTTP MCP servers so the assistant can discover more capabilities.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-4" data-panel>
+      <div class="panel-inner">
+        <div class="dark-panel">
+          <div class="dark-copy">
+            <span class="kicker" style="color: rgba(255,255,255,0.74);">Built for real system entry points</span>
+            <h2>Designed for people, built for system power.</h2>
+            <p>The public story is simple: bring your own model and make the assistant useful. Underneath, Nexus coordinates host takeover, streaming responses, settings, tools and configuration across Android processes.</p>
+          </div>
+          <div class="dark-image">
+            <img src="assets/images/mcp_status.jpg" alt="Nexus MCP status screen">
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-5" data-panel>
+      <div class="panel-inner">
+        <span class="kicker">Capability surface</span>
+        <h2>A personal layer on top of Android.</h2>
+        <div class="feature-strip" aria-label="Core capabilities">
+          <article class="feature-col"><strong>Model choice</strong><p>Works with OpenAI, Anthropic, Google, DeepSeek and compatible API endpoints.</p></article>
+          <article class="feature-col"><strong>Assistant takeover</strong><p>Adapts to mainstream assistants such as Breeno and XiaoAi, with chat as a fallback.</p></article>
+          <article class="feature-col"><strong>Tool runtime</strong><p>Built in tools, custom tools and MCP servers are managed from one app surface.</p></article>
+          <article class="feature-col"><strong>User control</strong><p>API keys, memory, execution rules and takeover settings remain configurable.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-6" data-panel>
+      <div class="panel-inner platform-grid">
+        <div class="panel-copy">
+          <span class="kicker">Why this becomes a platform</span>
+          <h2>Not just another chat app.</h2>
+          <p class="platform-aside">The more tools and services a user connects, the more useful the assistant becomes. The product grows from a model switcher into an action layer for the phone.</p>
+        </div>
+        <div>
+          <div class="timeline">
+            <div class="timeline-row"><strong>Entry</strong><span>Use the voice assistant people already know instead of asking them to learn a new app.</span></div>
+            <div class="timeline-row"><strong>Control</strong><span>Let users choose their own model provider, API key and endpoint.</span></div>
+            <div class="timeline-row"><strong>Memory</strong><span>Persist preferences and important information across conversations.</span></div>
+            <div class="timeline-row"><strong>Extension</strong><span>Add built in tools, custom commands and MCP services as the capability surface grows.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-7" data-panel>
+      <div class="panel-inner final-grid">
+        <div>
+          <span class="kicker">Current status</span>
+          <h2>Your model. Your tools. Your phone.</h2>
+        </div>
+        <div>
+          <p class="closing-note">Nexus is in beta today. It already points to a bigger category: a user owned assistant that can act across the phone while staying configurable and extensible.</p>
+          <div class="actions">
+            <a class="button primary" href="#panel-1">Back to start</a>
+          </div>
+        </div>
+        <div class="page-footer">
+          <span>Nexus</span>
+          <span>Bring your own model. Configure your own assistant.</span>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  const shell = document.getElementById('snap-shell');
+  const panels = Array.from(document.querySelectorAll('[data-panel]'));
+  const dots = Array.from(document.querySelectorAll('.pager button'));
+  let active = 0;
+
+  const setActive = (index) => {
+    active = index;
+    dots.forEach((dot, i) => {
+      const isActive = i === index;
+      dot.classList.toggle('active', isActive);
+      dot.setAttribute('aria-current', isActive ? 'true' : 'false');
+    });
+  };
+
+  const goToIndex = (index) => {
+    const target = panels[index];
+    if (!target) return;
+    shell.scrollTo({ top: target.offsetTop, behavior: 'smooth' });
+  };
+
+  dots.forEach((dot) => {
+    dot.addEventListener('click', () => {
+      const index = Number(dot.dataset.index || '0');
+      goToIndex(index);
+    });
+  });
+
+  document.querySelectorAll('a[href^="#panel-"]').forEach((link) => {
+    link.addEventListener('click', (event) => {
+      const href = link.getAttribute('href');
+      if (!href) return;
+      const panel = document.querySelector(href);
+      if (!panel) return;
+      event.preventDefault();
+      const index = panels.indexOf(panel);
+      goToIndex(index);
+    });
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        const index = panels.indexOf(entry.target);
+        if (index !== -1) setActive(index);
+      }
+    });
+  }, {
+    root: shell,
+    threshold: 0.62,
+  });
+
+  panels.forEach((panel) => observer.observe(panel));
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'PageDown') {
+      event.preventDefault();
+      goToIndex(Math.min(active + 1, panels.length - 1));
+    }
+    if (event.key === 'ArrowUp' || event.key === 'PageUp') {
+      event.preventDefault();
+      goToIndex(Math.max(active - 1, 0));
+    }
+  });
+
+  setActive(0);
+})();
+</script>
+</body>
+</html>
