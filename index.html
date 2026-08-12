@@ -107,6 +107,25 @@
       .label { font-family: var(--font-mono); font-size: 20px; letter-spacing: 0.05em; color: var(--faint); margin-bottom: 14px; }
 
       /* ===========================================
+         TEXT HALO (文本光晕 / 描边) — cream outline +
+         soft glow around every glyph, so type stays
+         readable when the physics shapes drift
+         underneath. text-shadow is inherited, so a
+         single rule on .slide covers all text.
+         Tune the px values here if it feels heavy.
+         =========================================== */
+      .slide {
+        text-shadow:
+          -2px -2px 0 var(--cream),
+           2px -2px 0 var(--cream),
+          -2px  2px 0 var(--cream),
+           2px  2px 0 var(--cream),
+           0 0 8px var(--cream),
+           0 0 18px var(--cream),
+           0 0 32px var(--cream);
+      }
+
+      /* ===========================================
          COMPOSITION — centered name card
          =========================================== */
       .center-slide {
@@ -126,7 +145,7 @@
         margin-top: 76px; width: fit-content; max-width: 1560px;
       }
       .fact { flex: 0 0 360px; padding: 0 40px; border-right: 1px solid var(--hairline); }
-      .fact:first-child { border-left: 1px solid var(--hairline); }
+      .fact:last-child { border-right: none; }
       .fact .k { font-family: var(--font-mono); font-size: 19px; letter-spacing: 0.05em; color: var(--faint); margin-bottom: 16px; }
       .fact .k .accent { color: var(--accent); }
       .fact .v { font-family: var(--font-serif); font-size: 40px; line-height: 1.4; color: var(--icon); }
@@ -206,7 +225,7 @@
             <span class="name w editable" style="--d:0.45s">Niki<em class="accent">.</em></span>
           </h1>
           <p class="subtitle fade editable" style="--d:0.7s">
-            Volcano X Cilen
+            Volcano | Cilen
           </p>
 
           <!-- four facts -->
