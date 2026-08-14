@@ -60,14 +60,17 @@ window.__physics = (() => {
            one spec entry with link/img/label. */
         link:"https://www.linkedin.com/in/houman-dang-niki/",
         label:"LinkedIn — Houman Dang's profile",
-        img:"res/images/linkedin.png" },
+        img:"res/images/root/linkedin.png" },
       { kind:"poly", x:560, y:430, w:121, h:171, r:63, color:"rgba(188,108,37,.85)", angle:-.16,
         points:[[-.2,-.5],[.27,-.44],[.46,-.2],[.49,.24],[.14,.5],[-.33,.42],[-.5,.12],[-.46,-.3]] },
       { kind:"poly", x:1240, y:470, w:127, h:130, r:55, color:"rgba(163,177,138,.85)", angle:-.04,
         points:[[-.18,-.5],[.26,-.47],[.49,-.2],[.43,.27],[.05,.5],[-.33,.36],[-.5,.08],[-.48,-.33]] },
       { kind:"flower", x:360, y:760, w:214, h:211, r:90, color:"rgba(212,163,115,.85)", petals:17, inner:.69, angle:.03 },
       { kind:"poly", x:920, y:900, w:100, h:102, r:42, color:"rgba(40,54,24,.88)", angle:-.13,
-        points:[[-.18,-.5],[.32,-.39],[.5,-.08],[.37,.41],[-.2,.5],[-.46,.2],[-.5,-.16]] },
+        points:[[-.18,-.5],[.32,-.39],[.5,-.08],[.37,.41],[-.2,.5],[-.46,.2],[-.5,-.16]],
+        link:"https://github.com/niki914",
+        label:"GitHub — niki914",
+        img:"res/images/root/github.png" },
       { kind:"composite", x:1520, y:820, w:264, h:264, r:120, color:"rgba(233,237,201,.9)", innerColor:"rgba(40,54,24,.9)", angle:-.04 }
     ];
 

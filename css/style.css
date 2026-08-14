@@ -6,28 +6,21 @@
    =========================================== */
 @font-face {
   font-family: "AnthropicSerif";
-  src: url("../res/fonts/anthropic_serif_roman.woff2") format("woff2");
+  src: url("../res/fonts/anthropic/anthropic_serif_roman.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
   font-family: "AnthropicSerif";
-  src: url("../res/fonts/anthropic_serif_italic.woff2") format("woff2");
+  src: url("../res/fonts/anthropic/anthropic_serif_italic.woff2") format("woff2");
   font-weight: 400;
   font-style: italic;
   font-display: swap;
 }
 @font-face {
   font-family: "AnthropicSans";
-  src: url("../res/fonts/anthropic_sans_roman.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "AnthropicMono";
-  src: url("../res/fonts/anthropic_mono_roman.woff2") format("woff2");
+  src: url("../res/fonts/anthropic/anthropic_sans_roman.woff2") format("woff2");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -61,10 +54,24 @@
   --faint: rgba(96, 108, 56, 0.55);
   --hairline: rgba(96, 108, 56, 0.16);
 
-  --font-serif: "AnthropicSerif", Georgia, serif;
-  --font-sans: "AnthropicSans", "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "AnthropicMono", "SFMono-Regular", Consolas, monospace;
-  --font-jetbrains: "JetBrainsMono", "SFMono-Regular", Consolas, monospace;
+  --font-serif: "AnthropicSerif", serif;
+  --font-sans: "AnthropicSans", sans-serif;
+  --font-mono: "JetBrainsMono", monospace;
+
+  /* projects page — neutral text on light gray */
+  --projects-bg: #f5f5f7;
+  --projects-ink: #1d1d1f;    /* big titles, keypoint text */
+  --projects-muted: #6e6e73;  /* small labels, secondary text */
+  --projects-head-gap: clamp(24px, 2.6vw, 40px);
+
+  /* one fixed standard frame for every project card, so all cards in
+     the gallery share the same height and stay aligned. Assets are
+     prepared at 1598×1092: 560 × 1092/1598 ≈ 382.7. Images with a
+     different ratio are cropped to the frame by object-fit: cover. */
+  --project-card-width: 448px;
+  --project-card-height: calc(var(--project-card-width) * 1092 / 1598);
+  --project-gap: clamp(14px, 1.8vw, 30px);
+  --project-radius: clamp(28px, 3.4vw, 52px);
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --slide-pad-x: clamp(16px, 9.375vw, 180px);
@@ -83,9 +90,10 @@ html {
   /* no elastic bounce at the top (and bottom) of the page */
   overscroll-behavior-y: none;
   /* any residual overscroll paints the canvas: olive near the top
-     (cover-colored, so a bounce at the top shows cover, not cream)
-     and cream below, so the bottom of the page bounces cleanly */
-  background: linear-gradient(180deg, #4c5a3a 0%, #39432e 30vh, var(--cream) calc(30vh + 1px), var(--cream));
+     (cover-colored, so a bounce at the top shows cover, not cream),
+     the light gray across the gallery, and black at the very bottom
+     so a bounce after the outro doesn't flash gray */
+  background: linear-gradient(180deg, #4c5a3a 0%, #39432e 30vh, var(--projects-bg) calc(30vh + 1px), #000000);
 }
 body { margin: 0; background: var(--cream); }
 img, video, canvas, svg { max-width: 100%; max-height: 100%; }
@@ -147,7 +155,7 @@ h1 em { font-style: italic; }
 .hero h1 { font-size: clamp(28px, 4.375vw, 84px); }
 .hero h1 .name { display: block; font-size: clamp(44px, 10.9375vw, 210px); line-height: 1.02; margin-top: clamp(6px, 0.63vw, 12px); }
 
-.subtitle { margin: clamp(16px, 2.29vw, 44px) 0 0; color: var(--muted); font-family: var(--font-jetbrains); font-size: clamp(15px, 1.51vw, 29px); line-height: 1.6; }
+.subtitle { margin: clamp(16px, 2.29vw, 44px) 0 0; color: var(--muted); font-family: var(--font-mono); font-size: clamp(15px, 1.51vw, 29px); line-height: 1.6; }
 .subtitle .accent { color: var(--accent); }
 .accent { color: var(--accent); }
 
@@ -161,7 +169,7 @@ h1 em { font-style: italic; }
 }
 .fact { flex: 0 0 clamp(150px, 18.75vw, 360px); padding: 0 clamp(12px, 2.08vw, 40px); border-right: 1px solid var(--hairline); }
 .fact:last-child { border-right: none; }
-.fact .k { font-family: var(--font-jetbrains); font-size: clamp(11px, 0.99vw, 19px); letter-spacing: 0.05em; color: var(--faint); margin-bottom: clamp(8px, 0.83vw, 16px); }
+.fact .k { font-family: var(--font-mono); font-size: clamp(11px, 0.99vw, 19px); letter-spacing: 0.05em; color: var(--faint); margin-bottom: clamp(8px, 0.83vw, 16px); }
 .fact .k .accent { color: var(--accent); }
 .fact .v { font-family: var(--font-serif); font-size: clamp(17px, 2.083vw, 40px); line-height: 1.4; color: var(--icon); }
 .fact .v em { font-style: italic; color: var(--muted); font-size: clamp(14px, 1.72vw, 33px); }
@@ -221,7 +229,7 @@ h1 em { font-style: italic; }
 .pre-tag {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-jetbrains);
+  font-family: var(--font-mono);
   font-weight: 400;
   font-size: clamp(18px, 2.08vw, 40px);
   letter-spacing: 0.04em;
@@ -232,11 +240,224 @@ h1 em { font-style: italic; }
 }
 
 /* ===========================================
-   NEXT PAGE — plain cream, no dots. Slides up
-   over the pinned hero at the end of the
-   reveal, then takes over the screen.
+   PROJECTS — horizontal gallery. The base
+   stylesheet renders the track as a native
+   horizontally scrollable, snap-stopped list
+   (no-JS, touch, reduced motion). On desktop
+   js/projects.js adds `projects-enhanced` to
+   <html>, which swaps the track to a
+   translate3d-driven fixed gallery: the pin
+   sticks to the viewport, the heading and
+   controls stay, and the track moves 1:1 with
+   the vertical scroll.
    =========================================== */
-.next {
+.projects {
   position: relative; z-index: 1;
-  min-height: 100vh; background: var(--cream);
+  min-height: 100vh;
+  background: var(--projects-bg);
+}
+
+.projects-pin {
+  position: relative;
+  display: flex; flex-direction: column;
+  padding-top: clamp(40px, 7vw, 140px);
+}
+
+.projects-heading { padding-inline: var(--slide-pad-x); }
+/* title homage — matches the hero name: serif, deep olive ink, amber
+   period (the accent-colored full stop is the signature detail) */
+.projects-heading h2 {
+  margin: 0 0 var(--projects-head-gap);
+  max-width: 15ch;
+  font-family: var(--font-serif); font-weight: 400;
+  font-size: clamp(66px, 8vw, 148px);
+  line-height: 0.98;
+  letter-spacing: 0;
+  color: var(--icon);
+}
+/* subtitle homage — matches the hero subtitle (houman dang): mono,
+   muted olive. The hero's wide name→subtitle gap is intentionally
+   not copied; a normal margin is used instead. */
+.projects-heading .subtitle {
+  margin: clamp(10px, 1.1vw, 18px) 0 0;
+}
+
+.projects-viewport {
+  margin-block: var(--projects-head-gap) clamp(18px, 2.2vw, 36px);
+  overflow: hidden;   /* the enhanced track is wider than the page */
+}
+
+.projects-track {
+  position: relative;   /* items' offsetParent — offsets stay track-local */
+  list-style: none; margin: 0;
+  display: flex; gap: var(--project-gap);
+  padding-inline: var(--slide-pad-x);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--slide-pad-x);
+  overscroll-behavior-inline: contain;
+}
+
+.project-item {
+  position: relative;   /* linked cards get an absolute <a> overlay */
+  flex: 0 0 auto;
+  width: var(--project-card-width);
+  scroll-snap-align: start;
+}
+
+/* project card — a fixed frame with the image absolutely positioned,
+   so it never affects layout: every card keeps exactly
+   var(--project-card-height), so their top edges align across the
+   gallery. The image fills the frame via object-fit: cover; a 1%
+   scale micro-overshoots the edges so a subpixel rounding can never
+   expose the card behind the image. translateZ(0) gives the card its
+   own compositing layer so the rounded-edge antialiasing never mixes
+   colors into the image. */
+.project-card {
+  position: relative;
+  width: 100%; height: var(--project-card-height);
+  border-radius: var(--project-radius);
+  overflow: hidden;
+  transform: translateZ(0);
+}
+.project-card-img {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scale(1.01);
+}
+
+.project-copy {
+  padding-top: clamp(14px, 1.2vw, 22px);
+  max-width: 100%;
+}
+/* generic linked-card hotspot — created by js/projects.js for every
+   item with a data-link attribute, the same pattern as the fx-link
+   floaters: one transparent <a> covering the card (image area) only,
+   so the description text below stays non-clickable */
+.project-link {
+  position: absolute; inset: 0;
+  cursor: pointer;
+}
+.project-description {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: clamp(13px, 0.95vw, 15px);
+  line-height: 1.6;
+}
+.project-description .keypoint { color: var(--projects-ink); }
+.project-description .details { color: var(--projects-muted); }
+
+/* the counter is kept for screen readers (aria-live); visually
+   hidden — navigation is scroll / keyboard only, no buttons */
+.projects-status {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ===========================================
+   ENHANCED (desktop) — sticky pin + fixed
+   horizontal mapping. The section's own height
+   is stretched by js/projects.js to
+   viewportHeight + travelX so the pin un-sticks
+   exactly when the last card reaches its end.
+   =========================================== */
+html.projects-enhanced .projects-pin {
+  position: sticky; top: 0;
+  height: 100vh; height: 100dvh;
+  overflow: hidden;
+}
+/* the viewport stretches the track to the full middle band; each
+   item is a column centered in the band. Cards keep their fixed
+   standard height (var(--project-card-height)) — the frame never
+   compresses */
+html.projects-enhanced .projects-viewport {
+  display: flex; min-height: 0;
+  flex: 1;
+}
+html.projects-enhanced .projects-track {
+  flex: none;
+  width: max-content;
+  overflow: visible;
+  scroll-snap-type: none;
+}
+html.projects-enhanced .project-item {
+  display: flex; flex-direction: column;
+  justify-content: flex-start;   /* every card's top edge lines up;
+                                    description lengths vary, so centering
+                                    would stagger the frames */
+}
+html.projects-enhanced .project-card {
+  flex: none;   /* fixed frame — never shrinks, never compresses */
+}
+html.projects-enhanced .project-copy { flex-shrink: 0; }
+
+/* ===========================================
+   TOUCH & NARROW — native horizontal swipe.
+   The base layout already scrolls; only the
+   card footprint changes. (js/projects.js
+   skips enhancement when this query matches.)
+   =========================================== */
+@media (max-width: 767px), (pointer: coarse) {
+  .project-item { width: min(84vw, 420px); }
+  .project-card { height: calc(min(84vw, 420px) * 1092 / 1598); }
+}
+
+/* short windows: compact the heading so the full card still fits
+   still fits the middle band. The card frame never shrinks — on
+   short windows the description below it is what clips first. */
+@media (max-height: 760px) {
+  .projects-pin { padding-top: clamp(28px, 5vw, 84px); }
+  .projects-heading h2 { font-size: clamp(29px, 3.9vw, 65px); line-height: 0.98; margin-bottom: clamp(12px, 1.4vw, 22px); }
+  .projects-viewport { margin-block: 10px 14px; }
+  .project-copy { padding-top: 10px; }
+  .project-description { font-size: clamp(11px, 0.95vw, 13px); line-height: 1.5; }
+}
+/* very short windows: drop the subtitle to keep the card visible */
+@media (max-height: 540px) {
+  .projects-heading .subtitle { display: none; }
+}
+
+/* ===========================================
+   REDUCED MOTION — no sticky, no transforms,
+   no color interpolation. The gallery becomes
+   a plain grid/list; everything stays readable.
+   js/projects.js skips enhancement entirely.
+   =========================================== */
+@media (prefers-reduced-motion: reduce) {
+  .projects { background: var(--projects-bg); }
+  .projects-pin {
+    position: static;
+    height: auto;
+    overflow: visible;
+  }
+  .projects-viewport { overflow: visible; }
+  .projects-track {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+    align-items: start;
+    gap: var(--project-gap);
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .project-item { width: 100%; scroll-snap-align: none; }
+}
+
+/* ===========================================
+   OUTRO — blank black page at the end. Follows
+   the gallery in normal flow; projects.js fades
+   the shared page background into it as it
+   slides up. Static black under reduced motion
+   and with JS off.
+   =========================================== */
+.outro {
+  position: relative; z-index: 1;
+  min-height: 100vh;
+  background: #000000;
 }

@@ -71,11 +71,56 @@
       </header>
     </div>
 
-    <!-- NEXT PAGE — blank for now -->
-    <section class="next" aria-label="more about me"></section>
+    <!-- PROJECTS — horizontal gallery. Base: a native horizontally
+         scrollable, snap-stopped list (works with JS off, on touch,
+         and under reduced motion). js/projects.js adds
+         `projects-enhanced` on desktop, which pins the section and
+         maps vertical scroll to a translate3d() on the track. -->
+    <section class="projects" id="projects" aria-labelledby="projects-title">
+      <div class="projects-pin">
+        <header class="projects-heading">
+          <h2 id="projects-title">Things I<br>make<em class="accent">.</em></h2>
+          <p class="subtitle">focusing on mobile development</p>
+        </header>
+
+        <div class="projects-viewport">
+          <ol class="projects-track">
+            <li class="project-item" data-link="https://github.com/niki914/agentic-nexus" data-label="Native Mobile Agent">
+              <div class="project-card">
+                <img class="project-card-img" src="res/images/root/ai_agent.png" alt="Native Mobile Agent — Android automation agent" width="2112" height="1394" decoding="async" />
+              </div>
+              <div class="project-copy">
+                <p class="project-description" lang="en"><span class="keypoint">Native Mobile Agent.</span> <span class="details">Read screen, click, scroll, run Python scripts, and interact with remote environments like Termux or SSH. Designed with MD3E and Apple Liquid Glass aesthetics, it blends powerful automation with a sleek, translucent UI experience.</span></p>
+              </div>
+            </li>
+            <li class="project-item" data-link="https://github.com/niki914/Myspotify" data-label="Music App — a native Android music player">
+              <div class="project-card">
+                <img class="project-card-img" src="res/images/root/music_app.png" alt="Music App — Android music player" width="1598" height="1092" decoding="async" />
+              </div>
+              <div class="project-copy">
+                <p class="project-description" lang="en"><span class="keypoint">A native Android music player.</span> <span class="details">Combines Apple Music's clean design with Spotify API and local file playback. Every UI component is custom-built in Jetpack Compose—dynamic album backgrounds, smooth transitions, and a clean player interface.</span></p>
+              </div>
+            </li>
+            <li class="project-item" data-link="https://github.com/niki914?tab=repositories" data-label="GitHub Projects">
+              <div class="project-card">
+                <img class="project-card-img" src="res/images/root/more.svg" alt="GitHub" width="1600" height="1000" decoding="async" />
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <p class="projects-status" aria-live="polite">01 / 03</p>
+      </div>
+    </section>
+
+    <!-- OUTRO — a blank black page at the end. projects.js fades the
+         shared page background into it as it slides up after the
+         gallery has finished. -->
+    <section class="outro" aria-hidden="true"></section>
 
     <script src="js/physics.js"></script>
     <script src="js/reveal.js"></script>
     <script src="js/width-fit.js"></script>
+    <script src="js/projects.js"></script>
   </body>
 </html>

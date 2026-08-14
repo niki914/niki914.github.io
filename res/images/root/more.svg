@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="1600" height="1000">
+  <rect width="1600" height="1000" fill="#FFFFFF"/>
+
+  <g transform="translate(800, 500)">
+    <circle cx="0" cy="0" r="96" fill="#f5f5f7"/>
+
+    <!-- 硬朗几何箭头：统一粗线条、平直直角切边、尖端与三线交汇处完全实心填充 -->
+    <g stroke="#000000" stroke-width="14" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="4" fill="none">
+      <!-- 箭轴：直线贯穿至尖端，填满交汇处内侧 -->
+      <path d="M -36 0 L 22 0"/>
+      <!-- 箭头翅膀：连续折线配合 miter 连接，形成坚固尖端 -->
+      <path d="M -2 -24 L 22 0 L -2 24"/>
+    </g>
+  </g>
+</svg>
